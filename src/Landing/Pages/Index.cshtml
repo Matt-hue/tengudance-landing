@@ -1,15 +1,12 @@
 @page
 @model Landing.Pages.IndexModel
-@{
-    ViewData["Title"] = "tengudance — Matt's home on the web";
-}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#101411" />
-    <title>@ViewData["Title"]</title>
+    <title>tengudance — Matt's home on the web</title>
     <link rel="stylesheet" href="/site.css" />
 </head>
 <body>
@@ -21,7 +18,7 @@
 
         <section class="introduction" aria-labelledby="page-title">
             <p class="eyebrow">A small corner of the internet</p>
-            <h1 id="page-title">Matt's home<br />on the <span>web</span></h1>
+            <h1 id="page-title">Matt's home on the web</h1>
             <div class="intro-bottom">
                 <p class="intro-copy">A little space to call my own.<br />Glad you found your way here.</p>
                 <a class="github-link" href="https://github.com/matt-hue" rel="me">
@@ -60,7 +57,7 @@
             <ul class="quiet-checks" aria-label="Other checks">
                 @foreach (var check in Model.Report.Checks.Where(check => check.Status != "failed"))
                 {
-                    <li><span>@check.Name</span><span>@(check.Skipped ? "Skipped" : "Passing")</span></li>
+                    <li><span>@check.Name</span><span>@(check.Status == "skipped" ? "Skipped" : "Passing")</span></li>
                 }
             </ul>
         </section>

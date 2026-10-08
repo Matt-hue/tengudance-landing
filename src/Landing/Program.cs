@@ -1,38 +1,41 @@
-using System.Net.Http;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Landing;
 using Landing.Health;
 using Landing.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 
+// Docker's HEALTHCHECK runs this, because the runtime image has no curl or wget.
 if (args is ["--healthcheck"])
 {
-    return await RunHealthcheckAsync();
+    return await ProbeLivenessAsync();
 }
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddHealthChecks()
-    .AddCheck<BuildVersionHealthCheck>("build-version")
-    .AddCheck<ForwardedHttpsHealthCheck>("forwarded-https")
-    .AddCheck<ExpectedHostHealthCheck>("expected-host")
-    .AddCheck<ContentFilesHealthCheck>("content-files");
 builder.Services.AddSingleton<DiagnosticReportService>();
+builder.Services.AddHealthChecks()
+    .AddCheck<BuildVersionHealthCheck>("Build version")
+    .AddCheck<ForwardedHttpsHealthCheck>("Secure connection")
+    .AddCheck<ExpectedHostHealthCheck>("Expected host")
+    .AddCheck<ContentFilesHealthCheck>("Site content");
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
         | ForwardedHeaders.XForwardedHost
         | ForwardedHeaders.XForwardedProto;
-    // The app is reachable only through the proxy container on these private networks.
-    options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("10.0.0.0/8"));
-    options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("172.16.0.0/12"));
-    options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("192.168.0.0/16"));
+    // Only loopback is trusted by default, but Caddy runs in another container and connects from
+    // a Docker network address. The container publishes no ports, so only something on those
+    // private networks can reach it and set these headers.
+    foreach (var range in new[] { "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16" })
+    {
+        options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(range));
+    }
 });
 
 var app = builder.Build();
 
+// Must come first so everything after it sees the scheme and host the browser used.
 app.UseForwardedHeaders();
 app.Use(async (context, next) =>
 {
@@ -40,9 +43,11 @@ app.Use(async (context, next) =>
     await next();
 });
 app.UseStaticFiles();
-app.MapGet("/healthz", () => Results.Ok());
-app.MapGet("/version", (IConfiguration configuration) =>
-    Results.Text(configuration["APP_VERSION"] ?? "unknown", "text/plain"));
+
+// Liveness only. It deliberately ignores the diagnostic checks: a proxy or configuration problem
+// should show on the status panel, not make Docker mark the container unhealthy and stop a deploy.
+app.MapGet("/healthz", () => Results.Text("ok"));
+app.MapGet("/version", (IConfiguration configuration) => Results.Text(AppVersion.From(configuration)));
 app.MapGet("/status", async (DiagnosticReportService reports, CancellationToken cancellationToken) =>
 {
     var report = await reports.GetReportAsync(cancellationToken);
@@ -53,22 +58,16 @@ app.MapRazorPages();
 await app.RunAsync();
 return 0;
 
-static async Task<int> RunHealthcheckAsync()
+static async Task<int> ProbeLivenessAsync()
 {
-    using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(4) };
+    using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
     try
     {
         using var response = await client.GetAsync("http://localhost:8080/healthz");
         return response.IsSuccessStatusCode ? 0 : 1;
     }
-    catch (HttpRequestException)
-    {
-        return 1;
-    }
-    catch (TaskCanceledException)
+    catch (Exception)
     {
         return 1;
     }
 }
-
-public partial class Program { }

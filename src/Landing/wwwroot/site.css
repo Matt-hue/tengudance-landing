@@ -69,8 +69,7 @@ a:focus-visible {
     text-decoration: none;
 }
 
-.wordmark span,
-.introduction h1 span {
+.wordmark span {
     color: var(--accent);
 }
 
@@ -103,10 +102,6 @@ a:focus-visible {
     font-weight: 560;
     letter-spacing: -0.085em;
     line-height: 0.91;
-}
-
-.introduction h1 span {
-    font-weight: 430;
 }
 
 .intro-bottom {
