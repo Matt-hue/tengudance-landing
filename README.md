@@ -35,7 +35,8 @@ browser ──HTTPS──▶ Caddy container ──HTTP :8080──▶ this cont
    and host the browser used.
 
 The container publishes no host ports, so only Caddy can reach it. The app has no
-HTTPS redirection or HSTS of its own; that is Caddy's job.
+HTTPS redirection or HSTS of its own; Caddy redirects HTTP to HTTPS and its
+Caddyfile adds the `Strict-Transport-Security` header.
 
 Both containers are run by Docker Compose from a separate infrastructure repo. The
 app container has a 256 MB memory limit (it uses about 35–55 MB) and is given
@@ -183,3 +184,17 @@ matching SDK and runtime release and rebuild.
 Registry paths must be lowercase, so the image name is `matt-hue` even though the
 GitHub account is `Matt-hue`. A newer push to the same branch cancels a run still
 in progress.
+
+## Releasing
+
+Merging to `main` publishes an image but does not deploy it. To put it live:
+
+1. Wait for the Build workflow on `main` to pass, including the smoke test.
+2. In `tengudance-infra`, set the `landing` service's image in `compose.yaml` to
+   `ghcr.io/matt-hue/tengudance-landing:<full commit sha>`, and merge that change.
+   The infra repo's Deploy workflow pulls it and waits for it to be healthy.
+3. Check the footer of https://tengudance.com shows the new SHA, or
+   `curl https://tengudance.com/version`.
+
+Roll back the same way, with an older SHA. The `main` tag moves on every merge
+and is not used by the server.
