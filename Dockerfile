@@ -1,11 +1,11 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0.11 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.401 AS build
 WORKDIR /src
 COPY src/Landing/Landing.csproj src/Landing/
 RUN dotnet restore src/Landing/Landing.csproj
 COPY src/Landing/ src/Landing/
 RUN dotnet publish src/Landing/Landing.csproj --configuration Release --no-restore --output /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.11 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.12 AS runtime
 WORKDIR /app
 ARG APP_VERSION=unknown
 ENV APP_VERSION=${APP_VERSION}

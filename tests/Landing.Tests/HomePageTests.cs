@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -21,8 +22,13 @@ public sealed class HomePageTests
         Assert.Equal(HttpStatusCode.OK, home.StatusCode);
         Assert.Contains("Some systems need attention", html);
         Assert.Contains("The request was not identified as HTTPS.", html);
+        Assert.Contains("Skipped", html);
         Assert.Equal("no-store", home.Headers.CacheControl?.ToString());
         Assert.Equal(HttpStatusCode.ServiceUnavailable, status.StatusCode);
+        using var failedReport = JsonDocument.Parse(await status.Content.ReadAsStringAsync());
+        Assert.False(failedReport.RootElement.GetProperty("healthy").GetBoolean());
+        Assert.Contains(failedReport.RootElement.GetProperty("checks").EnumerateArray(),
+            check => check.GetProperty("status").GetString() == "failed");
         Assert.Equal(HttpStatusCode.OK, health.StatusCode);
     }
 
@@ -44,6 +50,10 @@ public sealed class HomePageTests
         Assert.Equal(HttpStatusCode.OK, home.StatusCode);
         Assert.Contains("All systems working", html);
         Assert.Equal(HttpStatusCode.OK, status.StatusCode);
+        using var passingReport = JsonDocument.Parse(await status.Content.ReadAsStringAsync());
+        Assert.True(passingReport.RootElement.GetProperty("healthy").GetBoolean());
+        Assert.All(passingReport.RootElement.GetProperty("checks").EnumerateArray(),
+            check => Assert.Equal("passed", check.GetProperty("status").GetString()));
         Assert.Equal(HttpStatusCode.OK, health.StatusCode);
         Assert.Equal("test-sha", version);
         Assert.Equal("no-store", status.Headers.CacheControl?.ToString());
