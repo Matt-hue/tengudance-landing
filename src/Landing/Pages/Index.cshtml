@@ -1,0 +1,74 @@
+@page
+@model Landing.Pages.IndexModel
+@{
+    ViewData["Title"] = "tengudance — Matt's home on the web";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101411" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="/site.css" />
+</head>
+<body>
+    <main class="page-shell">
+        <header class="masthead">
+            <a class="wordmark" href="/" aria-label="tengudance home">tengudance<span aria-hidden="true">.</span></a>
+            <span class="location">PERSONAL SITE <span aria-hidden="true">/</span> EST. ONLINE</span>
+        </header>
+
+        <section class="introduction" aria-labelledby="page-title">
+            <p class="eyebrow">A small corner of the internet</p>
+            <h1 id="page-title">Matt's home<br />on the <span>web</span></h1>
+            <div class="intro-bottom">
+                <p class="intro-copy">A little space to call my own.<br />Glad you found your way here.</p>
+                <a class="github-link" href="https://github.com/matt-hue" rel="me">
+                    <span>Find me on GitHub</span>
+                    <span class="arrow" aria-hidden="true">↗</span>
+                </a>
+            </div>
+        </section>
+
+        <section class="status-panel" aria-labelledby="status-heading">
+            @if (Model.Report.Healthy)
+            {
+                <div class="status-heading">
+                    <span class="status-indicator" aria-hidden="true"></span>
+                    <h2 id="status-heading">All systems working</h2>
+                </div>
+            }
+            else
+            {
+                <div class="status-heading status-heading-failed">
+                    <span class="status-indicator" aria-hidden="true"></span>
+                    <h2 id="status-heading">Some systems need attention</h2>
+                </div>
+                <ul class="check-list failures" aria-label="Failed checks">
+                    @foreach (var check in Model.Report.Checks.Where(check => check.Status == "failed"))
+                    {
+                        <li>
+                            <strong>@check.Name</strong>
+                            <span>@check.Message</span>
+                            <small>Likely cause: @check.LikelyCause</small>
+                        </li>
+                    }
+                </ul>
+            }
+            <p class="checked-at">Checked <time datetime="@Model.Report.CheckedAt.ToString("O")">@Model.Report.CheckedAt.ToString("HH:mm:ss 'UTC'")</time></p>
+            <ul class="quiet-checks" aria-label="Other checks">
+                @foreach (var check in Model.Report.Checks.Where(check => check.Status != "failed"))
+                {
+                    <li><span>@check.Name</span><span>@(check.Skipped ? "Skipped" : "Passing")</span></li>
+                }
+            </ul>
+        </section>
+
+        <footer class="footer">
+            <span>Made with care, on Earth.</span>
+            <span>Build @Model.Version</span>
+        </footer>
+    </main>
+</body>
+</html>
