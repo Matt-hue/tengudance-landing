@@ -42,7 +42,7 @@
                     <span class="status-indicator" aria-hidden="true"></span>
                     <h2 id="status-heading">Some systems need attention</h2>
                 </div>
-                <ul class="check-list failures" aria-label="Failed checks">
+                <ul class="check-list" aria-label="Failed checks">
                     @foreach (var check in Model.Report.Checks.Where(check => check.Status == "failed"))
                     {
                         <li>
