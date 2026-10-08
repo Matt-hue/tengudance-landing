@@ -21,8 +21,7 @@ public sealed class ExpectedHostHealthCheck(
             return Task.FromResult(HealthCheckResult.Healthy());
         }
 
-        logger.LogWarning("Request host did not match EXPECTED_HOST. Actual host: {ActualHost}, expected host: {ExpectedHost}",
-            actualHost, expectedHost);
+        logger.LogWarning("Request host did not match EXPECTED_HOST.");
         return Task.FromResult(HealthCheckResult.Unhealthy());
     }
 }

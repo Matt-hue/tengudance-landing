@@ -12,8 +12,7 @@ public sealed class ForwardedHttpsHealthCheck(IHttpContextAccessor httpContextAc
             return Task.FromResult(HealthCheckResult.Healthy());
         }
 
-        logger.LogWarning("Request was not marked HTTPS after forwarded-header processing. Scheme: {Scheme}, RemoteAddress: {RemoteAddress}",
-            request?.Scheme, request?.HttpContext.Connection.RemoteIpAddress);
+        logger.LogWarning("Request was not marked HTTPS after forwarded-header processing.");
         return Task.FromResult(HealthCheckResult.Unhealthy());
     }
 }
