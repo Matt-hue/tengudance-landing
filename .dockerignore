@@ -1,8 +1,5 @@
-.git
-.github
-**/bin
-**/obj
-**/.vs
-**/.vscode
-tests
-README.md
+# The image is built from the app project alone.
+*
+!src/Landing/
+src/Landing/bin/
+src/Landing/obj/
