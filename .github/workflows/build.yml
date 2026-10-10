@@ -39,25 +39,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
-      - uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      # Build into the runner's Docker engine only: nothing reaches the registry until the
+      # smoke test passes, so every tag on GHCR is an image that passed it.
       - uses: docker/build-push-action@v7
         with:
           context: .
-          push: true
+          load: true
           tags: |
             ${{ env.IMAGE }}:${{ github.sha }}
             ${{ env.IMAGE }}:main
           build-args: |
             APP_VERSION=${{ github.sha }}
-      # Runs the image as pushed, under the server's memory limit. There is no proxy here,
-      # so /status would rightly report 503; only / and /healthz are checked.
-      - name: Smoke test pushed image
+      # Runs the image under the server's memory limit. There is no proxy here, so /status
+      # would rightly report 503; only / and /healthz are checked.
+      - name: Smoke test image
         run: |
-          docker pull "$IMAGE:$GITHUB_SHA"
           docker run -d --name landing-smoke --memory 256m -p 127.0.0.1:8080:8080 "$IMAGE:$GITHUB_SHA"
           trap 'docker logs landing-smoke; docker rm --force landing-smoke' EXIT
           for attempt in $(seq 1 30); do
@@ -70,3 +66,12 @@ jobs:
           curl --fail --silent --show-error --output /dev/null http://127.0.0.1:8080/
           curl --fail --silent --show-error http://127.0.0.1:8080/healthz
           [ "$(curl --fail --silent --show-error http://127.0.0.1:8080/version)" = "$GITHUB_SHA" ]
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push image
+        run: |
+          docker push "$IMAGE:$GITHUB_SHA"
+          docker push "$IMAGE:main"

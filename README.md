@@ -15,7 +15,7 @@ src/Landing/              the app
   wwwroot/site.css        the only static file
 tests/Landing.Tests/      xUnit tests against an in-memory server
 Dockerfile                multi-stage build of the runtime image
-.github/workflows/        build, test, publish and smoke test
+.github/workflows/        build, test, smoke test and publish
 ```
 
 ## How a request reaches the app in production
@@ -173,13 +173,15 @@ matching SDK and runtime release and rebuild.
 `.github/workflows/build.yml`:
 
 - On every pull request and push to `main`: restore, build and test in Release.
-- On push to `main` only, after the tests pass: log in to ghcr.io with the
-  workflow's `GITHUB_TOKEN` (the publish job alone has `packages: write`), then
-  build and push `ghcr.io/matt-hue/tengudance-landing` tagged with the full commit
-  SHA and with `main`, passing the SHA as `APP_VERSION`.
-- Then pull the pushed image, run it with a 256 MB limit, wait for it to be
-  healthy, and check `/`, `/healthz` and that `/version` returns the commit SHA.
-  It does not call `/status`, because without a proxy that correctly returns 503.
+- On push to `main` only, after the tests pass: build
+  `ghcr.io/matt-hue/tengudance-landing` into the runner's Docker engine, tagged
+  with the full commit SHA and with `main`, passing the SHA as `APP_VERSION`.
+- Smoke test that image: run it with a 256 MB limit, wait for it to be healthy,
+  and check `/`, `/healthz` and that `/version` returns the commit SHA. It does
+  not call `/status`, because without a proxy that correctly returns 503.
+- Only if the smoke test passes, log in to ghcr.io with the workflow's
+  `GITHUB_TOKEN` (the publish job alone has `packages: write`) and push both
+  tags. A tag on GHCR therefore always means the image passed its smoke test.
 
 Registry paths must be lowercase, so the image name is `matt-hue` even though the
 GitHub account is `Matt-hue`. A newer push to the same branch cancels a run still
@@ -189,9 +191,12 @@ in progress.
 
 Merging to `main` publishes an image but does not deploy it. To put it live:
 
-1. Wait for the Build workflow on `main` to pass, including the smoke test.
+1. Wait for the Build workflow on `main` to pass. It pushes the image only after
+   the smoke test passes.
 2. In `tengudance-infra`, set the `landing` service's image in `compose.yaml` to
    `ghcr.io/matt-hue/tengudance-landing:<full commit sha>`, and merge that change.
+   Use the SHA of the commit on `main` that the Build ran for (for a merged PR,
+   the merge commit, not the PR's own commits, which have no image).
    The infra repo's Deploy workflow pulls it and waits for it to be healthy.
 3. Check the footer of https://tengudance.com shows the new SHA, or
    `curl https://tengudance.com/version`.
