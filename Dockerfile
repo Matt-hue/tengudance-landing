@@ -1,11 +1,11 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0.401 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.404 AS build
 WORKDIR /src
 COPY src/Landing/Landing.csproj src/Landing/
 RUN dotnet restore src/Landing/Landing.csproj
 COPY src/Landing/ src/Landing/
 RUN dotnet publish src/Landing/Landing.csproj --configuration Release --no-restore --output /app/publish -p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.12 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.15 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 # Same as the base image's default, stated here because the health check and proxy rely on it.
